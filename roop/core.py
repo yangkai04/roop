@@ -20,7 +20,7 @@ import roop.metadata
 import roop.ui as ui
 from roop.predictor import predict_image, predict_video
 from roop.processors.frame.core import get_frame_processors_modules
-from roop.utilities import has_image_extension, is_image, is_video, detect_fps, create_video, extract_frames, get_temp_frame_paths, restore_audio, create_temp, move_temp, clean_temp, normalize_output_path
+from roop.utilities import has_image_extension, has_gif_extension, is_image, is_video, detect_fps, create_video, create_gif, extract_frames, get_temp_frame_paths, restore_audio, create_temp, move_temp, move_temp_gif, clean_temp, normalize_output_path
 
 warnings.filterwarnings('ignore', category=FutureWarning, module='insightface')
 warnings.filterwarnings('ignore', category=UserWarning, module='torchvision')
@@ -129,13 +129,16 @@ def update_status(message: str, scope: str = 'ROOP.CORE') -> None:
 
 
 def start() -> None:
+    print("AAAAAAAAAAAAAA")
     for frame_processor in get_frame_processors_modules(roop.globals.frame_processors):
         if not frame_processor.pre_start():
             return
+    print("BBBBBBBBBBBBBB")
     # process image to image
     if has_image_extension(roop.globals.target_path):
-        if predict_image(roop.globals.target_path):
-            destroy()
+        #if predict_image(roop.globals.target_path):
+        #    destroy()
+        print("XXXXXXXXXXXXXXXX")
         shutil.copy2(roop.globals.target_path, roop.globals.output_path)
         # process frame
         for frame_processor in get_frame_processors_modules(roop.globals.frame_processors):
@@ -148,9 +151,27 @@ def start() -> None:
         else:
             update_status('Processing to image failed!')
         return
+    if has_gif_extension(roop.globals.target_path):
+        update_status('Creating temporary resources...')
+        create_temp(roop.globals.target_path)
+        update_status('Extracting frames with 30 FPS...')
+        extract_frames(roop.globals.target_path)
+        # process frame
+        temp_frame_paths = get_temp_frame_paths(roop.globals.target_path)
+        if temp_frame_paths:
+            for frame_processor in get_frame_processors_modules(roop.globals.frame_processors):
+                update_status('Progressing...', frame_processor.NAME)
+                frame_processor.process_video(roop.globals.source_path, temp_frame_paths)
+                frame_processor.post_process()
+        else:
+            update_status('Frames not found...')
+            return
+        create_gif(roop.globals.target_path)
+        move_temp_gif(roop.globals.target_path, roop.globals.output_path)
+        return
     # process image to videos
-    if predict_video(roop.globals.target_path):
-        destroy()
+    #if predict_video(roop.globals.target_path):
+    #    destroy()
     update_status('Creating temporary resources...')
     create_temp(roop.globals.target_path)
     # extract frames
@@ -178,6 +199,7 @@ def start() -> None:
         create_video(roop.globals.target_path, fps)
     else:
         update_status('Creating video with 30 FPS...')
+        print("AAAAAAAAAAAAAAAA: " + roop.globals.target_path)
         create_video(roop.globals.target_path)
     # handle audio
     if roop.globals.skip_audio:

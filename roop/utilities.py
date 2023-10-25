@@ -14,6 +14,7 @@ import roop.globals
 
 TEMP_DIRECTORY = 'temp'
 TEMP_VIDEO_FILE = 'temp.mp4'
+TEMP_GIF_FILE = 'temp.gif'
 
 # monkey patch ssl for mac
 if platform.system().lower() == 'darwin':
@@ -30,6 +31,15 @@ def run_ffmpeg(args: List[str]) -> bool:
         pass
     return False
 
+def run_ffmpeg_gif(args: List[str]) -> bool:
+    commands = ['ffmpeg', '-loglevel', roop.globals.log_level]
+    commands.extend(args)
+    try:
+        subprocess.check_output(commands, stderr=subprocess.STDOUT)
+        return True
+    except Exception:
+        pass
+    return False
 
 def detect_fps(target_path: str) -> float:
     command = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'default=noprint_wrappers=1:nokey=1', target_path]
@@ -61,6 +71,15 @@ def create_video(target_path: str, fps: float = 30) -> bool:
     return run_ffmpeg(commands)
 
 
+def create_gif(target_path: str, fps: float = 30) -> bool:
+    print("create_gif")
+    temp_output_path = get_temp_output_path_gif(target_path)
+    temp_directory_path = get_temp_directory_path(target_path)
+    commands = ['-i', os.path.join(temp_directory_path, '%04d.' + roop.globals.temp_frame_format)]
+    commands.extend(['-y', temp_output_path])
+    return run_ffmpeg_gif(commands)
+
+
 def restore_audio(target_path: str, output_path: str) -> None:
     temp_output_path = get_temp_output_path(target_path)
     done = run_ffmpeg(['-i', temp_output_path, '-i', target_path, '-c:v', 'copy', '-map', '0:v:0', '-map', '1:a:0', '-y', output_path])
@@ -82,6 +101,10 @@ def get_temp_directory_path(target_path: str) -> str:
 def get_temp_output_path(target_path: str) -> str:
     temp_directory_path = get_temp_directory_path(target_path)
     return os.path.join(temp_directory_path, TEMP_VIDEO_FILE)
+
+def get_temp_output_path_gif(target_path: str) -> str:
+    temp_directory_path = get_temp_directory_path(target_path)
+    return os.path.join(temp_directory_path, TEMP_GIF_FILE)
 
 
 def normalize_output_path(source_path: str, target_path: str, output_path: str) -> Optional[str]:
@@ -105,6 +128,13 @@ def move_temp(target_path: str, output_path: str) -> None:
             os.remove(output_path)
         shutil.move(temp_output_path, output_path)
 
+def move_temp_gif(target_path: str, output_path: str) -> None:
+    temp_output_path = get_temp_output_path_gif(target_path)
+    if os.path.isfile(temp_output_path):
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        shutil.move(temp_output_path, output_path)
+
 
 def clean_temp(target_path: str) -> None:
     temp_directory_path = get_temp_directory_path(target_path)
@@ -118,6 +148,8 @@ def clean_temp(target_path: str) -> None:
 def has_image_extension(image_path: str) -> bool:
     return image_path.lower().endswith(('png', 'jpg', 'jpeg', 'webp'))
 
+def has_gif_extension(image_path: str) -> bool:
+    return image_path.lower().endswith(('gif'))
 
 def is_image(image_path: str) -> bool:
     if image_path and os.path.isfile(image_path):

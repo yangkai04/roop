@@ -39,15 +39,18 @@ def pre_check() -> bool:
 
 
 def pre_start() -> bool:
+    print("CCCCCCCCCCCCCCCCC")
     if not is_image(roop.globals.source_path):
         update_status('Select an image for source path.', NAME)
         return False
     elif not get_one_face(cv2.imread(roop.globals.source_path)):
         update_status('No face in source path detected.', NAME)
         return False
+    print("C11111111111111111")
     if not is_image(roop.globals.target_path) and not is_video(roop.globals.target_path):
         update_status('Select an image or video for target path.', NAME)
         return False
+    print("DDDDDDDDDDDDDDDDD")
     return True
 
 
@@ -65,7 +68,8 @@ def process_frame(source_face: Face, reference_face: Face, temp_frame: Frame) ->
         many_faces = get_many_faces(temp_frame)
         if many_faces:
             for target_face in many_faces:
-                temp_frame = swap_face(source_face, target_face, temp_frame)
+                if target_face.gender == 0:
+                    temp_frame = swap_face(source_face, target_face, temp_frame)
     else:
         target_face = find_similar_face(temp_frame, reference_face)
         if target_face:

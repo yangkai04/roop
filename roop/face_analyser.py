@@ -1,3 +1,4 @@
+import numpy as np
 import threading
 from typing import Any, Optional, List
 import insightface
@@ -43,12 +44,26 @@ def get_many_faces(frame: Frame) -> Optional[List[Face]]:
         return None
 
 
+def find_similar_face_(frame: Frame, reference_face: Face) -> Optional[Face]:
+    many_faces = get_many_faces(frame)
+    feats = []
+    if many_faces:
+        for face in many_faces:
+            feats.append(face.normed_embedding)
+    feats = np.array(feats, dtype=np.float32)
+    target_feat = np.array(reference_face.normed_embedding, dtype=np.float32)
+    sims = np.dot(feats, target_feat)
+    print(sims)
+    target_index = int(sims.argmax())
+    return many_faces[target_index]
+
 def find_similar_face(frame: Frame, reference_face: Face) -> Optional[Face]:
     many_faces = get_many_faces(frame)
     if many_faces:
         for face in many_faces:
             if hasattr(face, 'normed_embedding') and hasattr(reference_face, 'normed_embedding'):
                 distance = numpy.sum(numpy.square(face.normed_embedding - reference_face.normed_embedding))
-                if distance < roop.globals.similar_face_distance:
+                #if face.gender == 0 and distance < roop.globals.similar_face_distance:
+                if face.gender == 0:
                     return face
     return None
